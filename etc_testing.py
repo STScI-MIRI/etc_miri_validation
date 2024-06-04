@@ -129,13 +129,6 @@ def run_etc(datapath, outpath, star, filters, input_dic):
             )
         )
 
-    # write the table to a file
-    result_tab.write(
-        outpath + star + "_ETC_results.txt",
-        format="ascii",
-        overwrite=True,
-    )
-
     return result_tab
 
 
@@ -166,11 +159,11 @@ def comp_snr(datapath, outpath, star, filters, etc_res):
         Comparison between predicted and measured SNR
     """
     # create a figure
-    fig = plt.figure()
+    fig, ax = plt.subplots()
 
     # create a table for the results
     result_tab = Table(
-        names=("filter", "SNR_ETC", "SNR_data", "frac.diff=(data-ETC)/data"),
+        names=("filter", "SNR_ETC", "SNR_data", "SNR_diff=(data-ETC)/data"),
         dtype=("str", "float64", "float64", "float64"),
     )
 
@@ -205,7 +198,7 @@ def comp_snr(datapath, outpath, star, filters, etc_res):
         diff = (mean_snr - etc_snr) / mean_snr
 
         # save the results to the table
-        result_tab.add_row((filter, etc_snr, mean_snr, diff))
+        result_tab.add_row((filter, "%.2f" % etc_snr, "%.2f" % mean_snr, "%.2f" % diff))
 
         # plot the measured and predicted SNR vs. time
         sc = plt.scatter(
@@ -223,19 +216,12 @@ def comp_snr(datapath, outpath, star, filters, etc_res):
     xtick_labels = xtick_times.to_value("iso", subfmt="date")
     plt.xticks(xticks, xtick_labels, rotation=27)
     plt.axvline(60128, color="k")
-    plt.text(59850, 1000, "cycle 1", fontsize=18)
-    plt.text(60200, 1000, "cycle 2", fontsize=18)
+    plt.text(0.1, 0.7, "cycle 1", fontsize=18, transform=ax.transAxes)
+    plt.text(0.7, 0.7, "cycle 2", fontsize=18, transform=ax.transAxes)
     plt.xlabel("date")
     plt.ylabel("SNR")
     plt.legend(loc="upper center", ncols=3)
     plt.savefig(outpath + star + "_SNR.pdf", bbox_inches="tight")
-
-    # write the table to a file
-    result_tab.write(
-        outpath + star + "_SNR_comp.txt",
-        format="ascii",
-        overwrite=True,
-    )
 
     return result_tab
 
@@ -377,8 +363,8 @@ def main():
 
     # define the star
     # star = "BD+60 1753"
-    star = "HD 180609"
-    # star = "2MASS J17430448+6655015"
+    # star = "HD 180609"
+    star = "2MASS J17430448+6655015"
 
     # open the original ETC input file (for BD+60 1753, filter F560W)
     with open(path + "etc_workbook_download/" + star + "/input.json", "r") as infile:
