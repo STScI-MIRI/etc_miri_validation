@@ -43,7 +43,7 @@ def run_etc(datapath, outpath, star, filters, input_dic):
 
     for filter in filters:
         # obtain the table with the observation strategy
-        filename = filter + "_bkgsub_eefrac0.7_phot.fits"
+        filename = filter + "_eefrac0.7_phot.fits"
         phot_tab = Table.read(datapath + filename)
         star_mask = phot_tab["name"] == star
 
@@ -64,14 +64,16 @@ def run_etc(datapath, outpath, star, filters, input_dic):
         else:
             sub = subs[0].lower()
 
-        # obtain the number of groups
+        # obtain the number of groups and integrations
         ngroups = phot_tab[star_mask][time_mask]["ngroups"]
-        if not np.all(ngroups == ngroups[0]):
+        nints = phot_tab[star_mask][time_mask]["nints"]
+        if not np.all(ngroups == ngroups[0]) or not np.all(nints == nints[0]):
             print(
-                "Number of groups for this star is not the same between different observations, please check."
+                "Number of groups or integrations for this star is not the same between different observations, please check."
             )
         else:
             ngroup = int(ngroups[0])
+            nint = int(nints[0])
 
         # obtain the aperture radius and the sky annulus radii
         ap_rads = phot_tab[star_mask][time_mask]["aprad"] * 0.11
@@ -98,14 +100,7 @@ def run_etc(datapath, outpath, star, filters, input_dic):
 
         # change the number of groups and integrations
         input_dic["configuration"]["detector"]["ngroup"] = ngroup
-        if star == "BD+60 1753" and filter == "F2550W":
-            input_dic["configuration"]["detector"]["nint"] = 10
-        elif star == "HD 180609" and filter == "F560W":
-            input_dic["configuration"]["detector"]["nint"] = 2
-        elif star == "2MASS J17430448+6655015" and filter == "F1500W":
-            input_dic["configuration"]["detector"]["nint"] = 2
-        else:
-            input_dic["configuration"]["detector"]["nint"] = 1
+        input_dic["configuration"]["detector"]["nint"] = nint
 
         # change the aperture and sky annulus radii
         input_dic["strategy"]["aperture_size"] = aprad
