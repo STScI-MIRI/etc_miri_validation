@@ -139,13 +139,31 @@ def run_etc(datapath, outpath, star, filters, input_dic):
     return result_tab
 
 
-def comp_snr(datapath, outpath, star, filters, etc_snrs):
+def comp_snr(datapath, outpath, star, filters, etc_res):
     """
     Function to compare the predicted and the measured SNR
 
     Parameters
     ----------
-    datapath, outpath, star, filters, etc_snrs
+    datapath : string
+        Path to the data files
+
+    outpath : string
+        Path to store the output table and plot
+
+    star : string
+        Name of the star
+
+    filters : list
+        Filters
+
+    etc_res : astropy.table
+        ETC predictions
+
+    Returns
+    -------
+    comp_tab : astropy table
+        Comparison between predicted and measured SNR
     """
     # create a figure
     fig = plt.figure()
@@ -158,9 +176,10 @@ def comp_snr(datapath, outpath, star, filters, etc_snrs):
 
     for i, filter in enumerate(filters):
         # obtain the table with the photometry
-        filename = filter + "_bkgsub_eefrac0.7_phot.fits"
-        filename = filter + "_eefrac0.7_phot.fits"
-
+        if filter == "F2550W":
+            filename = filter + "_bkgsub_eefrac0.7_phot.fits"
+        else:
+            filename = filter + "_eefrac0.7_phot.fits"
         phot_tab = Table.read(datapath + filename)
         star_mask = phot_tab["name"] == star
 
@@ -174,13 +193,13 @@ def comp_snr(datapath, outpath, star, filters, etc_snrs):
 
         # obtain the SNRs of the observations and calculate the mean
         snrs = (
-            phot_tab[star_mask]["aperture_sum_bkgsub"]
-            / phot_tab[star_mask]["aperture_sum_bkgsub_err"]
+            phot_tab[star_mask]["aperture_sum_bkgsub"][time_mask]
+            / phot_tab[star_mask]["aperture_sum_bkgsub_err"][time_mask]
         )
-        mean_snr = np.mean(snrs[time_mask])
+        mean_snr = np.mean(snrs)
 
         # obtain the predicted SNR
-        etc_snr = etc_snrs[etc_snrs["filter"] == filter.lower()]["SNR"][0]
+        etc_snr = etc_res[etc_res["filter"] == filter.lower()]["SNR"][0]
 
         # calculate the difference between the measured and predicted SNR
         diff = (mean_snr - etc_snr) / mean_snr
@@ -191,7 +210,7 @@ def comp_snr(datapath, outpath, star, filters, etc_snrs):
         # plot the measured and predicted SNR vs. time
         sc = plt.scatter(
             times[time_mask],
-            snrs[time_mask],
+            snrs,
             label=filter + ": " + "{:.2f}".format(diff),
         )
         color = sc.get_facecolor()
@@ -357,8 +376,8 @@ def main():
     path = "/Users/mdecleir/Documents/MIRI_func/"
 
     # define the star
-    star = "BD+60 1753"
-    # star = "HD 180609"
+    # star = "BD+60 1753"
+    star = "HD 180609"
     # star = "2MASS J17430448+6655015"
 
     # open the original ETC input file (for BD+60 1753, filter F560W)
