@@ -76,8 +76,11 @@ def run_etc(datapath, outpath, star, filters, input_dic):
                 back_table["background"],
             ]
 
-            # change the subarray
+            # change the subarray and readout pattern
             input_dic["configuration"]["detector"]["subarray"] = obs["subarray"].lower()
+            input_dic["configuration"]["detector"]["readout_pattern"] = obs[
+                "readpattern"
+            ].lower()
 
             # change the number of groups and integrations
             input_dic["configuration"]["detector"]["ngroup"] = int(obs["ngroups"])
@@ -95,6 +98,7 @@ def run_etc(datapath, outpath, star, filters, input_dic):
                 input_dic["configuration"]["detector"]["ngroup"],
                 input_dic["configuration"]["detector"]["nint"],
                 input_dic["configuration"]["detector"]["subarray"],
+                input_dic["configuration"]["detector"]["readout_pattern"],
             )
 
             # run the ETC
