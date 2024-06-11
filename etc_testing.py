@@ -6,6 +6,7 @@ import numpy as np
 
 from astropy.table import Table
 from astropy.time import Time
+from astropy import visualization
 from pandeia.engine.perform_calculation import perform_calculation
 
 
@@ -37,92 +38,63 @@ def run_etc(datapath, outpath, star, filters, input_dic):
     """
     # create a Table for the results
     result_tab = Table(
-        names=("filter", "SNR", "background"),
-        dtype=("str", "float64", "float64"),
+        names=("filter", "date", "SNR", "background"),
+        dtype=("str", "str", "float64", "float64"),
     )
 
+    # run over all filters
     for filter in filters:
         # obtain the table with the observation strategy
         filename = filter + "_eefrac0.7_phot.fits"
         phot_tab = Table.read(datapath + filename)
-        star_mask = phot_tab["name"] == star
+        observations = phot_tab[phot_tab["name"] == star]
 
         # skip this filter if there are no observations
-        if np.sum(star_mask) == 0:
+        if len(observations) == 0:
             continue
 
-        # obtain the MJD times of the observations and remove commissioning data
-        times = phot_tab[star_mask]["timemid"]
-        time_mask = times > 59762.2
+        # run over all observations
+        for obs in observations:
+            # obtain the date of the observation
+            time = Time(obs["timemid"], format="mjd")
+            date = time.to_value("iso", subfmt="date")
 
-        # obtain the subarray
-        subs = phot_tab[star_mask][time_mask]["subarray"]
-        if not np.all(subs == subs[0]):
+            # change the filter
+            input_dic["configuration"]["instrument"]["filter"] = filter.lower()
+
+            # change the subarray
+            input_dic["configuration"]["detector"]["subarray"] = obs["subarray"].lower()
+
+            # change the number of groups and integrations
+            input_dic["configuration"]["detector"]["ngroup"] = int(obs["ngroups"])
+            input_dic["configuration"]["detector"]["nint"] = int(obs["nints"])
+
+            # change the aperture and sky annulus radii
+            input_dic["strategy"]["aperture_size"] = obs["aprad"] * 0.11
+            input_dic["strategy"]["sky_annulus"] = [
+                obs["annrad1"] * 0.11,
+                obs["annrad2"] * 0.11,
+            ]
             print(
-                "Subarray for this star is not the same between different observations, please check."
+                date,
+                input_dic["configuration"]["instrument"]["filter"],
+                input_dic["configuration"]["detector"]["ngroup"],
+                input_dic["configuration"]["detector"]["nint"],
+                input_dic["configuration"]["detector"]["subarray"],
             )
-        else:
-            sub = subs[0].lower()
 
-        # obtain the number of groups and integrations
-        ngroups = phot_tab[star_mask][time_mask]["ngroups"]
-        nints = phot_tab[star_mask][time_mask]["nints"]
-        if not np.all(ngroups == ngroups[0]) or not np.all(nints == nints[0]):
-            print(
-                "Number of groups or integrations for this star is not the same between different observations, please check."
+            # run the ETC
+            report = perform_calculation(input_dic)
+
+            # add the results to the table
+            result_tab.add_row(
+                (
+                    report["scalar"]["filter"],
+                    date,
+                    report["scalar"]["sn"],
+                    report["scalar"]["background"],
+                )
             )
-        else:
-            ngroup = int(ngroups[0])
-            nint = int(nints[0])
-
-        # obtain the aperture radius and the sky annulus radii
-        ap_rads = phot_tab[star_mask][time_mask]["aprad"] * 0.11
-        in_ann_rads = phot_tab[star_mask][time_mask]["annrad1"] * 0.11
-        out_ann_rads = phot_tab[star_mask][time_mask]["annrad2"] * 0.11
-        if (
-            not np.all(ap_rads == ap_rads[0])
-            or not np.all(in_ann_rads == in_ann_rads[0])
-            or not np.all(out_ann_rads == out_ann_rads[0])
-        ):
-            print(
-                "Aperture or sky annulus radii for this star are not the same between different observations, please check."
-            )
-        else:
-            aprad = ap_rads[0]
-            in_ann_rad = in_ann_rads[0]
-            out_ann_rad = out_ann_rads[0]
-
-        # change the filter
-        input_dic["configuration"]["instrument"]["filter"] = filter.lower()
-
-        # change the subarray
-        input_dic["configuration"]["detector"]["subarray"] = sub
-
-        # change the number of groups and integrations
-        input_dic["configuration"]["detector"]["ngroup"] = ngroup
-        input_dic["configuration"]["detector"]["nint"] = nint
-
-        # change the aperture and sky annulus radii
-        input_dic["strategy"]["aperture_size"] = aprad
-        input_dic["strategy"]["sky_annulus"] = [in_ann_rad, out_ann_rad]
-        print(
-            filter,
-            ngroup,
-            input_dic["configuration"]["detector"]["nint"],
-            input_dic["configuration"]["detector"]["subarray"],
-        )
-
-        # run the ETC
-        report = perform_calculation(input_dic)
-
-        # add the results to the table
-        result_tab.add_row(
-            (
-                report["scalar"]["filter"],
-                report["scalar"]["sn"],
-                report["scalar"]["background"],
-            )
-        )
 
     return result_tab
 
@@ -155,13 +127,15 @@ def comp_snr(datapath, outpath, star, filters, etc_res):
     """
     # create a figure
     fig, ax = plt.subplots()
+    colors = plt.get_cmap("tab10")
 
     # create a table for the results
     result_tab = Table(
-        names=("filter", "SNR_ETC", "SNR_data", "SNR_diff=(data-ETC)/data"),
-        dtype=("str", "float64", "float64", "float64"),
+        names=("filter", "date", "SNR_ETC", "SNR_data", "SNR_diff=(data-ETC)/data"),
+        dtype=("str", "str", "float64", "float64", "float64"),
     )
 
+    # run over all filters
     for i, filter in enumerate(filters):
         # obtain the table with the photometry
         if filter == "F2550W":
@@ -169,41 +143,43 @@ def comp_snr(datapath, outpath, star, filters, etc_res):
         else:
             filename = filter + "_eefrac0.7_phot.fits"
         phot_tab = Table.read(datapath + filename)
-        star_mask = phot_tab["name"] == star
+        observations = phot_tab[phot_tab["name"] == star]
 
         # skip this filter if there are no observations
-        if np.sum(star_mask) == 0:
+        if len(observations) == 0:
             continue
 
-        # obtain the MJD times of the observations and remove commissioning data
-        times = phot_tab[star_mask]["timemid"]
-        time_mask = times > 59762.2
+        # run over all observations
+        for obs in observations:
+            # obtain the date of the observation
+            time = Time(obs["timemid"], format="mjd")
+            date = time.to_value("iso", subfmt="date")
 
-        # obtain the SNRs of the observations and calculate the mean
-        snrs = (
-            phot_tab[star_mask]["aperture_sum_bkgsub"][time_mask]
-            / phot_tab[star_mask]["aperture_sum_bkgsub_err"][time_mask]
-        )
-        mean_snr = np.mean(snrs)
+            # obtain the SNR of the observation
+            snr_data = obs["aperture_sum_bkgsub"] / obs["aperture_sum_bkgsub_err"]
 
-        # obtain the predicted SNR
-        etc_snr = etc_res[etc_res["filter"] == filter.lower()]["SNR"][0]
+            # obtain the predicted SNR
+            filt_mask = etc_res["filter"] == filter.lower()
+            date_mask = etc_res["date"] == date
+            snr_etc = etc_res[filt_mask & date_mask]["SNR"][0]
 
-        # calculate the difference between the measured and predicted SNR
-        diff = (mean_snr - etc_snr) / mean_snr
+            # calculate the difference between the measured and predicted SNR
+            diff = (snr_data - snr_etc) / snr_data
 
-        # save the results to the table
-        result_tab.add_row((filter, "%.2f" % etc_snr, "%.2f" % mean_snr, "%.2f" % diff))
+            # save the results to the table
+            result_tab.add_row(
+                (filter, date, "%.2f" % snr_etc, "%.2f" % snr_data, "%.2f" % diff)
+            )
 
-        # plot the measured and predicted SNR vs. time
-        sc = plt.scatter(
-            times[time_mask],
-            snrs,
-            label=filter + ": " + "{:.2f}".format(diff),
-        )
-        color = sc.get_facecolor()
-        plt.axhline(mean_snr, color=color, ls=":")
-        plt.axhline(etc_snr, color=color)
+            # plot the measured and predicted SNR vs. time
+            with visualization.time_support(format="iso"):
+                plt.scatter(
+                    time,
+                    snr_data,
+                    color=colors(i % 10),
+                    label=filter + ": " + "{:.2f}".format(diff),
+                )
+                plt.scatter(time, snr_etc, marker="x", color=colors(i % 10))
 
     # finalize and save the figure
     xticks = [59700, 59800, 59900, 60000, 60100, 60200, 60300, 60400]
@@ -252,6 +228,7 @@ def comp_back(datapath, outpath, star, filters, comp_tab, etc_res):
     """
     # create a figure
     fig, ax = plt.subplots()
+    colors = plt.get_cmap("tab10")
 
     # open the file with the time dependent calibration factors
     cal_tab = Table.read(datapath + "jwst_miri_photom_coeff.dat", format="ascii")
@@ -261,80 +238,77 @@ def comp_back(datapath, outpath, star, filters, comp_tab, etc_res):
     comp_tab["bkg_data"] = np.full(len(comp_tab), np.nan)
     comp_tab["bkg_diff=(data-ETC)/data"] = np.full(len(comp_tab), np.nan)
 
+    # run over all filters
     for i, filter in enumerate(filters):
         # obtain the table with the photometry
         filename = filter + "_eefrac0.7_phot.fits"
         phot_tab = Table.read(datapath + filename)
-        star_mask = phot_tab["name"] == star
+        observations = phot_tab[phot_tab["name"] == star]
 
         # skip this filter if there are no observations
-        if np.sum(star_mask) == 0:
+        if len(observations) == 0:
             continue
 
-        # obtain the MJD times of the observations and remove commissioning data
-        times = phot_tab[star_mask]["timemid"]
-        time_mask = times > 59762.2
+        # run over all observations
+        for obs in observations:
+            # obtain the date of the observation
+            time = Time(obs["timemid"], format="mjd")
+            date = time.to_value("iso", subfmt="date")
 
-        # obtain the background of the observations
-        bkgs_DNs = phot_tab[star_mask][time_mask]["mean_bkg"]
+            # obtain the background of the observations
+            bkg_DNs = obs["mean_bkg"]
 
-        # obtain the subarray of the observations
-        subs = phot_tab[star_mask][time_mask]["subarray"]
-        if not np.all(subs == subs[0]):
-            print(
-                "Subarray for this star is not the same between different observations, please check."
-            )
-        else:
-            sub = subs[0]
+            # obtain the subarray of the observations
+            sub = obs["subarray"]
 
-        # calculate the calibration factor (Gordon+2024)
-        # CF(t) = {A + B exp[−(t−to)/τ]} D(SA)
-        # A, B and τ in table 4, Gordon+2024
-        # D(SA) in table 3, Gordon+2024
-        # to = 59720 d
-        if sub == "FULL" or sub == "BRIGHTSKY":
-            D = 1
-        elif sub == "SUB256":
-            D = 0.985
-        elif sub == "SUB128":
-            D = 0.977
-        elif sub == "SUB64":
-            D = 0.969
-        else:
-            print("Unknown subarray, please check.")
-        cal_fil = cal_tab[cal_tab["filter"] == filter]
-        CF = (
-            cal_fil["photmjysr"]
-            + cal_fil["amplitude"]
-            * np.exp(-(times[time_mask] - 59720) / cal_fil["tau"])
-        ) * D
+            # calculate the calibration factor (Gordon+2024)
+            # CF(t) = {A + B exp[−(t−to)/τ]} D(SA)
+            # A, B and τ in table 4, Gordon+2024
+            # D(SA) in table 3, Gordon+2024
+            # to = 59720 d
+            if sub == "FULL" or sub == "BRIGHTSKY":
+                D = 1
+            elif sub == "SUB256":
+                D = 0.985
+            elif sub == "SUB128":
+                D = 0.977
+            elif sub == "SUB64":
+                D = 0.969
+            else:
+                print("Unknown subarray, please check.")
+            cal_fil = cal_tab[cal_tab["filter"] == filter]
+            CF = (
+                cal_fil["photmjysr"]
+                + cal_fil["amplitude"] * np.exp(-(time.value - 59720) / cal_fil["tau"])
+            ) * D
 
-        # convert the units from DN/s/pix to MJy/sr and calculate the mean background
-        bkgs_MJysr = bkgs_DNs * CF
-        mean_bkg = np.mean(bkgs_MJysr)
+            # convert the units from DN/s/pix to MJy/sr
+            bkg_MJysr = bkg_DNs * CF[0]
 
-        # obtain the predicted background
-        etc_bkg = etc_res[etc_res["filter"] == filter.lower()]["background"][0]
+            # obtain the predicted background
+            filt_mask = etc_res["filter"] == filter.lower()
+            date_mask = etc_res["date"] == date
+            bkg_etc = etc_res[filt_mask & date_mask]["background"][0]
 
-        # calculate the difference between the measured and predicted background
-        diff = (mean_bkg - etc_bkg) / mean_bkg
+            # calculate the difference between the measured and predicted background
+            diff = (bkg_MJysr - bkg_etc) / bkg_MJysr
 
-        # save the results to the table
-        comp_tab["bkg_ETC"][comp_tab["filter"] == filter] = "%.2f" % etc_bkg
-        comp_tab["bkg_data"][comp_tab["filter"] == filter] = "%.2f" % mean_bkg
-        comp_tab["bkg_diff=(data-ETC)/data"][comp_tab["filter"] == filter] = (
-            "%.2f" % diff
-        )
+            # save the results to the table
+            filt_mask = comp_tab["filter"] == filter
+            date_mask = comp_tab["date"] == date
+            comp_tab["bkg_ETC"][filt_mask & date_mask] = "%.2f" % bkg_etc
+            comp_tab["bkg_data"][filt_mask & date_mask] = "%.2f" % bkg_MJysr
+            comp_tab["bkg_diff=(data-ETC)/data"][filt_mask & date_mask] = "%.2f" % diff
 
-        # plot the measured and predicted background vs. time
-        sc = plt.scatter(
-            times[time_mask],
-            bkgs_MJysr,
-            label=filter + ": " + "{:.2f}".format(diff),
-        )
-        color = sc.get_facecolor()
-        plt.axhline(mean_bkg, color=color, ls=":")
-        plt.axhline(etc_bkg, color=color)
+            # plot the measured and predicted background vs. time
+            with visualization.time_support(format="iso"):
+                plt.scatter(
+                    time,
+                    bkg_MJysr,
+                    color=colors(i % 10),
+                    label=filter + ": " + "{:.2f}".format(diff),
+                )
+                plt.scatter(time, bkg_etc, marker="x", color=colors(i % 10))
 
     # finalize and save the figure
     xticks = [59700, 59800, 59900, 60000, 60100, 60200, 60300, 60400]
