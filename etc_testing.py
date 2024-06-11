@@ -62,6 +62,20 @@ def run_etc(datapath, outpath, star, filters, input_dic):
             # change the filter
             input_dic["configuration"]["instrument"]["filter"] = filter.lower()
 
+            # change the background
+            back_table = Table.read(
+                outpath
+                + "etc_workbook_download/"
+                + star
+                + "/backgrounds/backgrounds_"
+                + date
+                + ".fits"
+            )
+            input_dic["background"] = [
+                back_table["wavelength"],
+                back_table["background"],
+            ]
+
             # change the subarray
             input_dic["configuration"]["detector"]["subarray"] = obs["subarray"].lower()
 
@@ -335,7 +349,7 @@ def main():
     # star = "HD 180609"
     star = "2MASS J17430448+6655015"
 
-    # open the original ETC input file (for BD+60 1753, filter F560W)
+    # open the original ETC input file (for filter F560W)
     with open(path + "etc_workbook_download/" + star + "/input.json", "r") as infile:
         input_dic = json.loads(infile.read())
 
