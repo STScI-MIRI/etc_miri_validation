@@ -202,7 +202,6 @@ def comp_snr(datapath, outpath, star, filters, etc_res):
                     lw=1.5,
                     s=40,
                     alpha=0.9,
-                    label=filter + ": " + "{:.2f}".format(diff),
                 )
                 plt.scatter(
                     time,
@@ -261,8 +260,8 @@ def comp_snr(datapath, outpath, star, filters, etc_res):
         bbox_to_anchor=(0.9, 0.25),
     )
     handles = []
-    for i in len(filters):
-        handles.append(Patch(facecolor=colors(i % 10), alpha=0.9))
+    for j in range(len(filters)):
+        handles.append(Patch(facecolor=colors(j % 10), alpha=0.9))
     plt.figlegend(handles=handles, labels=filters, bbox_to_anchor=(0.9, 0.87))
 
     plt.savefig(outpath + star + "_SNR.pdf", bbox_inches="tight")
@@ -378,22 +377,74 @@ def comp_back(datapath, outpath, star, filters, comp_tab, etc_res):
                 plt.scatter(
                     time,
                     bkg_MJysr,
+                    marker="o",
                     color=colors(i % 10),
-                    label=filter + ": " + "{:.2f}".format(diff),
+                    facecolor="none",
+                    lw=1.5,
+                    s=40,
+                    alpha=0.9,
                 )
-                plt.scatter(time, bkg_etc, marker="x", color=colors(i % 10))
+                plt.scatter(
+                    time,
+                    bkg_etc,
+                    marker="x",
+                    color=colors(i % 10),
+                    lw=1.5,
+                    s=40,
+                    alpha=0.9,
+                )
 
     # finalize and save the figure
-    xticks = [59700, 59800, 59900, 60000, 60100, 60200, 60300, 60400]
-    xtick_times = Time(xticks, format="mjd")
-    xtick_labels = xtick_times.to_value("iso", subfmt="date")
-    plt.xticks(xticks, xtick_labels, rotation=20)
-    plt.axvline(60128, color="k")
-    plt.text(0.1, 0.7, "cycle 1", fontsize=18, transform=ax.transAxes)
-    plt.text(0.7, 0.7, "cycle 2", fontsize=18, transform=ax.transAxes)
-    plt.xlabel("date")
-    plt.ylabel("background (MJy/sr)")
-    plt.legend(loc="upper center", ncols=3)
+    xtick_labels = Time(
+        [
+            "2022-05-01",
+            "2022-08-01",
+            "2022-11-01",
+            "2023-02-01",
+            "2023-05-01",
+            "2023-08-01",
+            "2023-11-01",
+            "2024-02-01",
+            "2024-05-01",
+            "2024-08-01",
+        ],
+        format="iso",
+        out_subfmt="date",
+    )
+    xticks = xtick_labels.to_value("mjd")
+    plt.xticks(xticks, xtick_labels, rotation=27)
+    plt.xlabel("date", fontsize=16)
+    plt.ylabel("background (MJy/sr)", fontsize=16)
+
+    handle1 = Line2D(
+        [],
+        [],
+        lw=0,
+        color="grey",
+        marker="o",
+        fillstyle="none",
+        markersize=7,
+        alpha=0.9,
+    )
+    handle2 = Line2D(
+        [],
+        [],
+        lw=0,
+        color="grey",
+        marker="x",
+        markersize=7,
+        alpha=0.9,
+    )
+    plt.figlegend(
+        handles=[handle1, handle2],
+        labels=["data", "ETC"],
+        bbox_to_anchor=(0.9, 0.25),
+    )
+    handles = []
+    for j in range(len(filters)):
+        handles.append(Patch(facecolor=colors(j % 10), alpha=0.9))
+    plt.figlegend(handles=handles, labels=filters, bbox_to_anchor=(0.9, 0.87))
+
     plt.savefig(outpath + star + "_bkg.pdf", bbox_inches="tight")
 
     return comp_tab
@@ -404,8 +455,8 @@ def main():
     path = "/Users/mdecleir/Documents/MIRI_func/"
 
     # define the star
-    # star = "BD+60 1753"
-    star = "HD 180609"
+    star = "BD+60 1753"
+    # star = "HD 180609"
     # star = "2MASS J17430448+6655015"
 
     # open the original ETC input file (for filter F560W)
