@@ -61,6 +61,10 @@ def run_etc(datapath, outpath, star, filters, input_dic):
             time = Time(obs["timemid"], format="mjd")
             date = time.to_value("iso", subfmt="date")
 
+            # skip observations later than June 2024 (cycle 3)
+            if time.mjd > 60491:
+                continue
+
             # change the filter
             input_dic["configuration"]["instrument"]["filter"] = filter.lower()
 
@@ -174,6 +178,10 @@ def comp_snr(datapath, outpath, star, filters, etc_res):
             # obtain the date of the observation
             time = Time(obs["timemid"], format="mjd")
             date = time.to_value("iso", subfmt="date")
+
+            # skip observations later than June 2024 (cycle 3)
+            if time.mjd > 60491:
+                continue
 
             # obtain the SNR of the observation
             snr_data = obs["aperture_sum_bkgsub"] / obs["aperture_sum_bkgsub_err"]
@@ -326,6 +334,10 @@ def comp_back(datapath, outpath, star, filters, comp_tab, etc_res):
             # obtain the date of the observation
             time = Time(obs["timemid"], format="mjd")
             date = time.to_value("iso", subfmt="date")
+
+            # skip observations later than June 2024 (cycle 3)
+            if time.mjd > 60491:
+                continue
 
             # obtain the background of the observations
             bkg_DNs = obs["mean_bkg"]
