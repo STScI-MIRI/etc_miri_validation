@@ -105,6 +105,8 @@ def run_etc(datapath, outpath, star, filters, input_dic):
                 input_dic["configuration"]["detector"]["nint"],
                 input_dic["configuration"]["detector"]["subarray"],
                 input_dic["configuration"]["detector"]["readout_pattern"],
+                input_dic["strategy"]["aperture_size"],
+                input_dic["strategy"]["sky_annulus"],
             )
 
             # run the ETC
@@ -262,16 +264,21 @@ def comp_snr(datapath, outpath, star, filters, etc_res):
         markersize=7,
         alpha=0.9,
     )
+    if star == "BD+60 1753":
+        loc1 = (0.9, 0.8)
+    else:
+        loc1 = (0.9, 0.25)
     plt.figlegend(
-        handles=[handle1, handle2],
-        labels=["data", "ETC"],
-        bbox_to_anchor=(0.9, 0.25),
+        handles=[handle1, handle2], labels=["data", "ETC"], bbox_to_anchor=loc1
     )
     handles = []
     for j in range(len(filters)):
         handles.append(Patch(facecolor=colors(j % 10), alpha=0.9))
-    plt.figlegend(handles=handles, labels=filters, bbox_to_anchor=(0.9, 0.87))
-
+    if star == "BD+60 1753":
+        loc2 = (0.5, 0.55)
+    else:
+        loc2 = (0.9, 0.87)
+    plt.figlegend(handles=handles, labels=filters, bbox_to_anchor=loc2)
     plt.savefig(outpath + star + "_SNR.pdf", bbox_inches="tight")
 
     return result_tab
@@ -295,10 +302,10 @@ def comp_back(datapath, outpath, star, filters, comp_tab, etc_res):
     filters : list
         Filters
 
-    comp_tab : astropy table
+    comp_tab : astropy Table
         Comparison between predicted and measured SNR
 
-    etc_res : astropy.table
+    etc_res : astropy Table
         ETC predictions
 
     Returns
@@ -447,16 +454,21 @@ def comp_back(datapath, outpath, star, filters, comp_tab, etc_res):
         markersize=7,
         alpha=0.9,
     )
+    if star == "BD+60 1753":
+        loc1 = (0.9, 0.6)
+    else:
+        loc1 = (0.9, 0.25)
     plt.figlegend(
-        handles=[handle1, handle2],
-        labels=["data", "ETC"],
-        bbox_to_anchor=(0.9, 0.25),
+        handles=[handle1, handle2], labels=["data", "ETC"], bbox_to_anchor=loc1
     )
     handles = []
     for j in range(len(filters)):
         handles.append(Patch(facecolor=colors(j % 10), alpha=0.9))
-    plt.figlegend(handles=handles, labels=filters, bbox_to_anchor=(0.9, 0.87))
-
+    if star == "BD+60 1753":
+        loc2 = (0.5, 0.85)
+    else:
+        loc2 = (0.9, 0.87)
+    plt.figlegend(handles=handles, labels=filters, bbox_to_anchor=loc2)
     plt.savefig(outpath + star + "_bkg.pdf", bbox_inches="tight")
 
     return comp_tab
