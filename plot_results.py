@@ -23,29 +23,49 @@ def plot_comp_all(outpath, results):
     - for SNR
     - for background
     """
+    # create a figure
+    fig = plt.figure(figsize=(6, 7))
     # plot the predicted SNR of the ETC vs. the measured SNR
-    plt.scatter(results["SNR_data"], results["SNR_ETC"], color="k")
+    plt.scatter(
+        results["SNR_data"], results["SNR_ETC"], color="k", s=10, label="this work"
+    )
 
     # plot the one-to-one line
     x = np.arange(np.min(results["SNR_data"]), np.max(results["SNR_data"]), 1)
-    plt.plot(x, x, ls=":")
+    plt.plot(x, x, ls="-", label="SNR ETC = SNR data")
+    plt.plot(x, x * 1.1, ls=":", label="SNR ETC = 1.1 * SNR data")
+    plt.plot(x, x * 0.9, ls=":", label="SNR ETC = 0.9 * SNR data")
+    print(
+        "Percentage of data points above the one-to-one line for SNR",
+        np.sum(results["SNR_data"] < results["SNR_ETC"]) / len(results["SNR_data"]),
+    )
 
     # finalize and save the figure
     plt.xlabel("SNR data", fontsize=16)
     plt.ylabel("SNR ETC", fontsize=16)
+    plt.legend()
     plt.savefig(outpath + "SNR_comp_all.pdf", bbox_inches="tight")
 
     # plot the predicted background of the ETC vs. the measured background
-    plt.clf()
-    plt.scatter(results["bkg_data"], results["bkg_ETC"], color="k")
+    fig = plt.figure(figsize=(6, 7))
+    plt.scatter(
+        results["bkg_data"], results["bkg_ETC"], color="k", s=10, label="this work"
+    )
 
     # plot the one-to-one line
     x = np.arange(np.min(results["bkg_data"]), np.max(results["bkg_data"]), 1)
-    plt.plot(x, x, ls=":")
+    plt.plot(x, x, ls="-", label="bkg ETC = bkg data")
+    plt.plot(x, x * 1.1, ls=":", label="bkg ETC = 1.1 * bkg data")
+    plt.plot(x, x * 0.9, ls=":", label="bkg ETC = 0.9 * bkg data")
+    print(
+        "Percentage of data points under the one-to-one line for background",
+        np.sum(results["bkg_data"] > results["bkg_ETC"]) / len(results["bkg_data"]),
+    )
 
     # finalize and save the figure
     plt.xlabel("background data (MJy/sr)", fontsize=16)
     plt.ylabel("background ETC (MJy/sr)", fontsize=16)
+    plt.legend()
     plt.savefig(outpath + "bkg_comp_all.pdf", bbox_inches="tight")
 
 
@@ -120,10 +140,10 @@ def main():
     path = "/Users/mdecleir/Documents/MIRI_func/"
 
     # obtain the results
-    resultsHD = Table.read(path + "HD 180609_comp.txt", format="ascii")
-    resultsHD["star"] = "HD 180609"
     resultsBD = Table.read(path + "BD+60 1753_comp.txt", format="ascii")
     resultsBD["star"] = "BD+60 1753"
+    resultsHD = Table.read(path + "HD 180609_comp.txt", format="ascii")
+    resultsHD["star"] = "HD 180609"
     results2M = Table.read(path + "2MASS J17430448+6655015_comp.txt", format="ascii")
     results2M["star"] = "2MASS J17430448+6655015"
 
@@ -149,7 +169,7 @@ def main():
         "F2550W",
     ]
 
-    # compare SNR per filter
+    # compare SNR and background per filter
     plot_comp_filter(path, stars, all_results, filters)
 
 
