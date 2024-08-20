@@ -2,7 +2,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from astropy import visualization
 from astropy.table import Table, vstack
+from astropy.time import Time
 
 
 def plot_comp_all(outpath, stars, results):
@@ -12,7 +14,7 @@ def plot_comp_all(outpath, stars, results):
     Parameters
     ----------
     outpath : string
-        Path to store the output plot
+        Path to store the output plots
 
     stars : list
         Star names
@@ -102,7 +104,7 @@ def plot_comp_filter(outpath, stars, results, filters):
     Parameters
     ----------
     outpath : string
-        Path to store the output plot
+        Path to store the output plots
 
     stars : list
         Star names
@@ -162,6 +164,94 @@ def plot_comp_filter(outpath, stars, results, filters):
     fig2.savefig(outpath + "bkg_filter.pdf", bbox_inches="tight")
 
 
+def plot_comp_time(outpath, stars, results):
+    """
+    Function to plot the difference in SNR and background vs. time
+
+    Parameters
+    ----------
+    outpath : string
+        Path to store the output plots
+
+    stars : list
+        Star names
+
+    results : astropy Table
+        Data to plot
+
+    Returns
+    -------
+    Plots with fractional difference vs. time:
+    - for SNR
+    - for background
+    """
+    # create the figures
+    fig1, ax1 = plt.subplots(figsize=(8, 6))
+    fig2, ax2 = plt.subplots(figsize=(8, 6))
+    colors = plt.get_cmap("tab10")
+    markers = ["o", "X", "v"]
+
+    for i, star in enumerate(stars):
+        star_mask = results["star"] == star
+        dates = Time(results[star_mask]["date"], format="iso")
+        with visualization.time_support(format="iso"):
+            # plot SNR difference vs. time
+            ax1.scatter(
+                dates,
+                results[star_mask]["SNR_diff=(data-ETC)/data"],
+                color=colors(i % 3),
+                marker=markers[i],
+                s=15,
+                alpha=0.9,
+                label=star,
+            )
+            # plot background difference vs. time
+            ax2.scatter(
+                dates,
+                results[star_mask]["bkg_diff=(data-ETC)/data"],
+                color=colors(i % 3),
+                marker=markers[i],
+                s=15,
+                alpha=0.9,
+                label=star,
+            )
+
+    # finalize and save the plots
+    xtick_labels = Time(
+        [
+            "2022-05-01",
+            "2022-08-01",
+            "2022-11-01",
+            "2023-02-01",
+            "2023-05-01",
+            "2023-08-01",
+            "2023-11-01",
+            "2024-02-01",
+            "2024-05-01",
+            "2024-08-01",
+        ],
+        format="iso",
+        out_subfmt="date",
+    )
+    ax1.axhline(ls=":", color="k")
+    ax1.set_xlabel("date", fontsize=15)
+    ax1.set_ylabel("SNR diff. = (data-ETC)/data", fontsize=15)
+    ax1.set_xticks(xtick_labels)
+    ax1.set_xticklabels(xtick_labels)
+    ax1.tick_params(axis="x", labelrotation=27)
+    ax1.legend()
+    fig1.savefig(outpath + "SNR_time.pdf", bbox_inches="tight")
+
+    ax2.axhline(ls=":", color="k")
+    ax2.set_xlabel("date", fontsize=15)
+    ax2.set_ylabel("bkg diff. = (data-ETC)/data", fontsize=15)
+    ax2.set_xticks(xtick_labels)
+    ax2.set_xticklabels(xtick_labels)
+    ax2.tick_params(axis="x", labelrotation=27)
+    ax2.legend()
+    fig2.savefig(outpath + "bkg_time.pdf", bbox_inches="tight")
+
+
 def main():
     # define the path
     path = "/Users/mdecleir/Documents/MIRI_func/"
@@ -196,8 +286,11 @@ def main():
     # compare SNR and background for all measurements in one plot
     plot_comp_all(path, stars, all_results)
 
-    # compare SNR and background per filter
+    # compare SNR and background difference per filter
     plot_comp_filter(path, stars, all_results, filters)
+
+    # compare SNR and background difference over time
+    plot_comp_time(path, stars, all_results)
 
 
 if __name__ == "__main__":
