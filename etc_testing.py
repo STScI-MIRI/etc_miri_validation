@@ -353,25 +353,25 @@ def comp_back(datapath, outpath, star, filters, comp_tab, etc_res):
             sub = obs["subarray"]
 
             # calculate the calibration factor (Gordon+2024)
-            # CF(t) = {A + B exp[−(t−to)/τ]} D(SA)
-            # A, B and τ in table 4, Gordon+2024
-            # D(SA) in table 3, Gordon+2024
+            # CF(t) = {A + B exp[−(t−to)/τ]} / D(SA) (Eq. 4)
+            # A, B and τ in table 8, Gordon+2024
+            # D(SA) in table 7, Gordon+2024
             # to = 59720 d
-            if sub == "FULL" or sub == "BRIGHTSKY":
+            if sub == "FULL" or sub == "SUB128":
                 D = 1
+            elif sub == "BRIGHTSKY":
+                D = 1.005
             elif sub == "SUB256":
-                D = 0.985
-            elif sub == "SUB128":
-                D = 0.977
+                D = 0.98
             elif sub == "SUB64":
-                D = 0.969
+                D = 0.966
             else:
                 print("Unknown subarray, please check.")
             cal_fil = cal_tab[cal_tab["filter"] == filter]
             CF = (
                 cal_fil["photmjysr"]
                 + cal_fil["amplitude"] * np.exp(-(time.value - 59720) / cal_fil["tau"])
-            ) * D
+            ) / D
 
             # convert the units from DN/s/pix to MJy/sr
             bkg_MJysr = bkg_DNs * CF[0]
@@ -478,14 +478,8 @@ def main():
     # define the path
     path = "/Users/mdecleir/Documents/MIRI_func/"
 
-    # define the star
-    star = "BD+60 1753"
-    # star = "HD 180609"
-    # star = "2MASS J17430448+6655015"
-
-    # open the original ETC input file (for filter F560W)
-    with open(path + "etc_workbook_download/" + star + "/input.json", "r") as infile:
-        input_dic = json.loads(infile.read())
+    # define the stars
+    stars = ["BD+60 1753", "HD 180609", "2MASS J17430448+6655015"]
 
     # define the filters
     filters = [
@@ -500,23 +494,32 @@ def main():
         "F2550W",
     ]
 
-    # run the ETC for all filters
-    etc_results = run_etc(path + "Absfluxcal/", path, star, filters, input_dic)
+    for star in stars:
+        # open the original ETC input file (for filter F560W)
+        with open(
+            path + "etc_workbook_download/" + star + "/input.json", "r"
+        ) as infile:
+            input_dic = json.loads(infile.read())
 
-    # compare the predicted SNR from the ETC to the observed SNR
-    comp_table = comp_snr(path + "Absfluxcal/", path, star, filters, etc_results)
+            # run the ETC for all filters
+            etc_results = run_etc(path + "Absfluxcal/", path, star, filters, input_dic)
 
-    # compare the predicted background from the ETC to the observed background
-    comp_table = comp_back(
-        path + "Absfluxcal/", path, star, filters, comp_table, etc_results
-    )
+            # compare the predicted SNR from the ETC to the observed SNR
+            comp_table = comp_snr(
+                path + "Absfluxcal/", path, star, filters, etc_results
+            )
 
-    # write the results table to a file
-    comp_table.write(
-        path + star + "_comp.txt",
-        format="ascii",
-        overwrite=True,
-    )
+            # compare the predicted background from the ETC to the observed background
+            comp_table = comp_back(
+                path + "Absfluxcal/", path, star, filters, comp_table, etc_results
+            )
+
+        # write the results table to a file
+        comp_table.write(
+            path + star + "_comp.txt",
+            format="ascii",
+            overwrite=True,
+        )
 
 
 if __name__ == "__main__":
