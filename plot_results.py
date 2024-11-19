@@ -46,21 +46,28 @@ def plot_comp_all(outpath, stars, results):
             label=star,
         )
 
+        # print general results
+        print(
+            star,
+            ": Average SNR relative difference = |(data-ETC)|/data =",
+            np.mean(np.abs(results[star_mask]["SNR_diff=(data-ETC)/data"])),
+        )
+
     # plot the one-to-one line
     x = np.arange(np.min(results["SNR_data"]), np.max(results["SNR_data"]), 1)
-    plt.plot(x, x, ls="-", c="k", alpha=0.9, label="SNR ETC = SNR data")
+    plt.plot(x, x, ls="-", c="k", alpha=0.9, label="S/N ETC = S/N data")
     plt.plot(
-        x, x * 1.1, ls=":", c="purple", alpha=0.7, label="SNR ETC = 1.1 * SNR data"
+        x, x * 1.1, ls=":", c="purple", alpha=0.7, label="S/N ETC = 1.1 * S/N data"
     )
-    plt.plot(x, x * 0.9, ls=":", c="red", alpha=0.7, label="SNR ETC = 0.9 * SNR data")
+    plt.plot(x, x * 0.9, ls=":", c="red", alpha=0.7, label="S/N ETC = 0.9 * S/N data")
     print(
         "Percentage of data points above the one-to-one line for SNR",
         np.sum(results["SNR_data"] < results["SNR_ETC"]) / len(results["SNR_data"]),
     )
 
     # finalize and save the figure
-    plt.xlabel("SNR data", fontsize=16)
-    plt.ylabel("SNR ETC", fontsize=16)
+    plt.xlabel("S/N data", fontsize=16)
+    plt.ylabel("S/N ETC", fontsize=16)
     plt.legend()
     plt.savefig(outpath + "SNR_comp_all.pdf", bbox_inches="tight")
 
@@ -76,6 +83,13 @@ def plot_comp_all(outpath, stars, results):
             s=15,
             alpha=0.9,
             label=star,
+        )
+
+        # print general results
+        print(
+            star,
+            ": Average background relative difference = |(data-ETC)|/data =",
+            np.mean(np.abs(results[star_mask]["bkg_diff=(data-ETC)/data"])),
         )
 
     # plot the one-to-one line
@@ -153,7 +167,7 @@ def plot_comp_filter(outpath, stars, results, filters):
     # finalize and save the plots
     ax1.axhline(ls=":", color="k")
     ax1.set_xlabel("filter", fontsize=15)
-    ax1.set_ylabel("SNR diff. = (data-ETC)/data", fontsize=15)
+    ax1.set_ylabel("S/N diff. = (data-ETC)/data", fontsize=15)
     ax1.legend()
     fig1.savefig(outpath + "SNR_filter.pdf", bbox_inches="tight")
 
@@ -235,7 +249,7 @@ def plot_comp_time(outpath, stars, results):
     )
     ax1.axhline(ls=":", color="k")
     ax1.set_xlabel("date", fontsize=15)
-    ax1.set_ylabel("SNR diff. = (data-ETC)/data", fontsize=15)
+    ax1.set_ylabel("S/N diff. = (data-ETC)/data", fontsize=15)
     ax1.set_xticks(xtick_labels)
     ax1.set_xticklabels(xtick_labels)
     ax1.tick_params(axis="x", labelrotation=27)
