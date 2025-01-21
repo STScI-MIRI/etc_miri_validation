@@ -352,10 +352,10 @@ def comp_back(datapath, outpath, star, filters, comp_tab, etc_res):
             # obtain the subarray of the observations
             sub = obs["subarray"]
 
-            # calculate the calibration factor (Gordon+2024)
+            # calculate the calibration factor (Gordon+2025, https://ui.adsabs.harvard.edu/abs/2025AJ....169....6G/abstract)
             # CF(t) = {A + B exp[−(t−to)/τ]} / D(SA) (Eq. 4)
-            # A, B and τ in table 8, Gordon+2024
-            # D(SA) in table 7, Gordon+2024
+            # A, B and τ in table 8, Gordon+2025
+            # D(SA) in table 7, Gordon+2025
             # to = 59720 d
             if sub == "FULL" or sub == "SUB128":
                 D = 1
