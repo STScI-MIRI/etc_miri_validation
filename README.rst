@@ -1,13 +1,13 @@
 ETC Validation for MIRI Imager
 ==============================
 
-This repository contains code to run the JWST ETC (via the Pandeia engine) and compare the predictions for signal-to-noise ratio and background surface brightness to observations.
+This repository contains code to run the JWST ETC (via the Pandeia engine) and compare the predictions for signal-to-noise ratio and background surface brightness to observations from the JWST MIRI Imager.
 
 This project was finished in November 2024.
 
 
-Description
------------
+Project Description
+-------------------
 The goal of this project was to validate the accuracy of the JWST Exposure Time Calculator (ETC) (version 3.2) for the MIRI Imager. This was done by comparing the predicted signal-to-noise ratio (S/N) and background surface brightness from the ETC to the values measured from the absolute flux calibration data for three A dwarfs, using aperture photometry measurements. In most cases, the ETC 3.2 (which does not include corrections for imager count-rate loss or thermal background changes) overestimates the S/N and underestimates the background level, but the discrepancies depend on the selected star and filter.
 
 The methods and results of this project are described in detail in SOCCER document JWST-STScI-008884.
@@ -23,7 +23,7 @@ License
 -------
 
 This project is Copyright (c) Marjorie Decleir and licensed under
-the terms of the BSD 3-Clause License (see the ``LICENSE`` file for more information).
+the terms of the BSD 3-Clause License (see the `LICENSE <https://github.com/STScI-MIRI/etc_miri_validation?tab=BSD-3-Clause-1-ov-file>`_ file for more information).
 
 
 Dependencies
